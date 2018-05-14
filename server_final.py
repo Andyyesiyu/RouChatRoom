@@ -12,10 +12,10 @@ class Server:
         """
         构造
         """
-        self.__socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.__connections = list()
-        self.__nicknames = list()
-        self.host = socket.gethostname()
+        self.__socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # 初始化socket
+        self.__connections = list()  # 所有用户的连接列表
+        self.__nicknames = list()  # 所有用户的用户名
+        self.host = socket.gethostname()  # 获取主机的名称，并通过下面的语句获取ip
         self.ip = socket.gethostbyname(socket.gethostname())
 
     def __user_thread(self, user_id):
@@ -39,12 +39,15 @@ class Server:
                     # 如果是广播指令
                     if obj['type'] == 'broadcast':
                         self.__broadcast(obj['sender_id'], obj['message'])
+                    # 如果是文件，则进入广播文件函数
                     elif obj['type'] == 'file':
                         print('[Server] 开始广播文件')
                         self.__broadfile(user_id=obj['sender_id'], message=obj['message'], filename=obj['filename'], connection=connection)
+                    # 如果收到图片，则进入广播图片函数
                     elif obj['type'] == 'img':
                         print('[Server] 开始广播图片')
                         self.__broadfile(user_id=obj['sender_id'], message=obj['message'], filename=obj['imgname'], connection=connection, filetype='img')
+                    # 如果收到音频，则广播音频
                     elif obj['type'] == 'audio':
                         print('[Server] 开始广播音频')
                         self.__broadaudio(user_id=obj['sender_id'], message=obj['message'], connection=connection)
@@ -90,18 +93,6 @@ class Server:
                     'filename': filename
                 }).encode())
         # 为每一个用户广播数据包，进行数据传输
-        num = message/1024.0  # 计算存储转发的次数
-        if num != int(num):
-            num = int(num)+1
-        else:
-            num = int(num)
-        # for i in range(num):
-            # buffer = connection.recv(1024)  # 这里以1024为一个数据包进行存储并转发给其他所有用户
-            # for j in range(1, len(self.__connections)):
-                # if user_id != j:
-                    # self.__connections[j].send(buffer)
-        # data = b''
-
         while True:
             part = connection.recv(1024)
             print(len(part))
@@ -160,11 +151,10 @@ class Server:
 
         # 开始侦听
         while True:
-            connection, address = self.__socket.accept()
+            connection, address = self.__socket.accept()  # 解析收到的连接和地址
             print('[Server] 收到一个新连接', connection.getsockname(), connection.fileno())
 
             # 尝试接受数据
-            # noinspection PyBroadException
             try:
                 buffer = connection.recv(1024).decode()
                 # 解析成json数据
@@ -177,9 +167,9 @@ class Server:
                         'id': len(self.__connections) - 1
                     }).encode())
 
-                    # 开辟一个新的线程
+                    # 开辟一个新的线程用于监听处理该用户的所有消息
                     thread = threading.Thread(target=self.__user_thread, args=(len(self.__connections) - 1, ))
-                    thread.setDaemon(True)
+                    thread.setDaemon(True)  # 设置线程为守护线程，交给python程序管理
                     thread.start()
                 else:
                     print('[Server] 无法解析json数据包:', connection.getsockname(), connection.fileno())
